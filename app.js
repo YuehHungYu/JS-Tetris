@@ -84,3 +84,138 @@ function createPiece(type){
     ];
   }
 }
+
+function drawMatrix(matrix,offset){
+  matrix.forEach((row,y) => {
+    row.forEach((value,x)=>{
+      if(value!==0){
+        context.fillStyle=color[value];
+        context.fillRect(x+offset.x,y+offset.y,1,1);
+      }
+    });
+  });
+}
+
+function draw(){
+  context.fillStyle="#000";
+  context.fillRect(0,0,canvas.client.width,canvas.height);
+  drawMatrix(arena, {x: 0,y: 0});
+  drawMatrix(player.matrix,player.pos);
+}
+
+function merge(arena,player){
+  player.matrix.forEach((row,y)=>{
+    row.forEach((value,x)=>{
+      if(value!==0){
+        arena[y+player.pos.y][x+player.pos.x]=value;
+      }
+    });
+  });
+}
+
+function rotate(matrix,dir){
+  for(let y=0;y<matrix.length;++y){
+    for(let x=0;x<y;++x){
+      [matrix[x][y],matrix[y][x]]=[matrix[y][x],matrix[x][y]];
+    }
+  }
+  if(dir>0){
+    matrix.forEach((row)=>row.reverse());
+  }else{
+    matrix.reverse();
+  }
+}
+
+function playerDrop(){
+  player.pos.y++;
+  if(collide(arena,player)){
+    player.pos.y--;
+    merge(arena,player);
+    playerReset();
+    arenaSweep();
+    updateScore();
+  }
+  dropCounter=0;
+}
+
+function playerMove(offset){
+  player.pos.x+=offset;
+  if(collide(arena,player)){
+    player.pos.x-=offset;
+  }
+}
+
+
+//TODO
+function playerReset(){
+  const pieces="TJLOSZI";
+
+  // 這裡有問題字串轉長度
+  player.matrix=createPiece(pieces[(pieces.length*Math.random())|0]);
+  player.pos.y=0;
+  player.pos.x=((arena[0].length/2)|0)-((player.matrix[0]/2)|0);
+  if(collide(arena,player)){
+    arena.forEach((row)=>row.fill(0));
+    player.score=0;
+    updateScore();
+  }
+}
+
+function playerRotate(){
+  const pos=player.pos.x;
+  let offset=1;
+  rotate(player.matrix,dir);
+  while(collide(arena,player)){
+    player.pos.x=offset;
+    offset=-(offset+(offset>0?1:-1));
+    if(offset>player.matrix[0].length){
+      rotate(player.matrix,-dir);
+      player.pos.x=pos;
+      return;
+    }
+  }
+}
+
+let dropCounter=0;
+let dropInterval=0;
+let lastTime=0;
+
+function update(time=0) {
+  const deltaTime =time-lastTime;
+  dropCounter+=deltaTime;
+  if(dropCounter>dropInterval){
+    playerDrop();
+  }
+  lastTime=time;
+  draw();
+  requestAnimationFrame(update);
+}
+
+function updateScore(){
+  document.getElementById("score").innerText='Score: '+ player.score;
+}
+
+document.addEventListener("keydown",(event)=>{
+  if(event.keycode===37){
+    playerMove(-1);
+  }else if(event.keycode===39){
+    playerMove(1);
+  }else if(event.keycode===40){
+    playerDrop();
+  }else if(event.keycode===81){
+    playerRotate(-1);
+  }else if(event.keycode===87){
+    playerRotate(1);
+  }
+});
+
+const colors=[
+  null,
+  "#e6d933",
+  "#adff2f",
+  "#00ffff",
+  "#6495ed",
+  "#6633cc",
+  "#ff0da6",
+  "#ffff00",
+]
